@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logística Uruguay - VibeCode V7 (Final MVP)</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+        }
+
+        #map {
+            height: 100vh;
+            width: 100%;
+            z-index: 1;
+        }
+
+        #panel-control {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            width: 340px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 90vh;
+        }
+
+        h2 {
+            margin: 0;
+            color: #1a1a1a;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 5px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            outline: none;
+        }
+
+        button {
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-add {
+            background: #3498db;
+            color: white;
+            width: 50px;
+        }
+
+        .btn-add:hover {
+            background: #2980b9;
+        }
+
+        .btn-optimizar {
+            background: #27ae60;
+            color: white;
+            display: none;
+            width: 100%;
+        }
+
+        .btn-optimizar:hover {
+            background: #219150;
+        }
+
+        /* Botones de Acción (Nuevos) */
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .btn-gmaps {
+            background: #4285F4;
+            color: white;
+            flex: 1;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .btn-wa {
+            background: #25D366;
+            color: white;
+            flex: 1;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .btn-reset {
+            background: #ff7675;
+            color: white;
+            margin-top: auto;
+        }
+
+        .switch-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #555;
+            display: none;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: #27ae60;
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(20px);
+        }
+
+        #listaWrapper {
+            flex: 1;
+            overflow-y: auto;
+            border-top: 1px solid #eee;
+            margin-top: 5px;
+            padding-right: 5px;
+        }
+
+        .punto-item {
+            background: #fff;
+            border-bottom: 1px solid #f0f0f0;
+            padding: 10px 5px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 13px;
+            color: #444;
+        }
+
+        .punto-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            overflow: hidden;
+        }
+
+        .badge {
+            background: #2c3e50;
+            color: white;
+            min-width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .badge.start {
+            background: #27ae60;
+        }
+
+        .btn-delete {
+            color: #e74c3c;
+            background: none;
+            border: none;
+            padding: 5px;
+            cursor: pointer;
+        }
+
+        #status {
+            background: #eef2f7;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #2c3e50;
+            text-align: center;
+            border: 1px solid #dae1e7;
+        }
+
+        .marker-pin {
+            width: 30px;
+            height: 30px;
+            border-radius: 50% 50% 50% 0;
+            background: #3498db;
+            position: absolute;
+            transform: rotate(-45deg);
+            left: 50%;
+            top: 50%;
+            margin: -15px 0 0 -15px;
+            box-shadow: 0 3px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        .marker-pin::after {
+            content: '';
+            width: 20px;
+            height: 20px;
+            margin: 5px 0 0 5px;
+            background: #fff;
+            position: absolute;
+            border-radius: 50%;
+        }
+
+        .custom-div-icon span {
+            position: absolute;
+            width: 30px;
+            top: -8px;
+            left: 0;
+            text-align: center;
+            font-weight: bold;
+            font-size: 12px;
+            color: #3498db;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="panel-control">
+        <h2>🚚 VibeRouting <span style="font-size:12px; color:#aaa">v7.0</span></h2>
+
+        <div class="input-group">
+            <input type="text" id="direccionInput" placeholder="Ej: Obligado 880, Montevideo"
+                onkeypress="handleEnter(event)">
+            <button class="btn-add" onclick="buscarDireccion()"><i class="fas fa-search"></i></button>
+        </div>
+
+        <div class="stats-box" id="status">Cargando sistema...</div>
+
+        <div class="switch-container" id="switchContainer">
+            <span>🔄 Volver al Inicio</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="checkCircular" checked onchange="optimizarRuta()">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <button class="btn-optimizar" id="btnOptimizar" onclick="optimizarRuta()">⚡ Optimizar Recorrido</button>
+
+        <div class="action-buttons" id="actionButtons">
+            <button class="btn-gmaps" onclick="abrirGoogleMaps()">
+                <i class="fab fa-google"></i> GPS
+            </button>
+            <button class="btn-wa" onclick="compartirWhatsApp()">
+                <i class="fab fa-whatsapp"></i> Enviar
+            </button>
+        </div>
+
+        <div id="listaWrapper">
+            <div id="listaPuntos"></div>
+        </div>
+
+        <button class="btn-reset" onclick="borrarTodo()">🗑️ Reiniciar Todo</button>
+    </div>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <script>
+        var map = L.map('map').setView([-34.9011, -56.1645], 13);
+        L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap, © CartoDB'
+        }).addTo(map);
+
+        var paradas = [];
+        var marcadores = [];
+        var lineaRuta = null;
+
+        // --- 1. PERSISTENCIA (GUARDAR DATOS) ---
+        window.onload = function () {
+            var guardado = localStorage.getItem('vibeRouteData');
+            if (guardado) {
+                paradas = JSON.parse(guardado);
+                actualizarUI(paradas.length > 1);
+                document.getElementById('status').innerText = "📂 Rutas recuperadas.";
+            } else {
+                document.getElementById('status').innerText = "Ingresa el Depósito.";
+            }
+        };
+
+        function guardarDatos() {
+            localStorage.setItem('vibeRouteData', JSON.stringify(paradas));
+        }
+
+        // --- 2. FUNCIONES DE EXPORTACIÓN ---
+        function abrirGoogleMaps() {
+            if (paradas.length < 2) return;
+
+            // Construimos la URL de Google Maps
+            // Formato: https://www.google.com/maps/dir/Lat,Lng/Lat,Lng/...
+            var baseUrl = "https://www.google.com/maps/dir/";
+
+            paradas.forEach(p => {
+                baseUrl += `${p.lat},${p.lng}/`;
+            });
+
+            // Si es circular, agregamos el inicio al final
+            if (document.getElementById('checkCircular').checked) {
+                baseUrl += `${paradas[0].lat},${paradas[0].lng}/`;
+            }
+
+            window.open(baseUrl, '_blank');
+        }
+
+        function compartirWhatsApp() {
+            if (paradas.length < 1) return;
+
+            var texto = "*🚚 Hoja de Ruta - VibeRouting*\n\n";
+            paradas.forEach((p, index) => {
+                texto += `${index + 1}. ${p.nombre}\n`; // Limpiamos la URL de mapas en el texto simple
+            });
+
+            var linkMaps = "https://www.google.com/maps/dir/" + paradas.map(p => `${p.lat},${p.lng}`).join("/");
+            if (document.getElementById('checkCircular').checked) linkMaps += "/" + paradas[0].lat + "," + paradas[0].lng;
+
+            texto += `\n🗺️ *Link GPS:* ${linkMaps}`;
+
+            var url = `https://wa.me/?text=${encodeURIComponent(texto)}`;
+            window.open(url, '_blank');
+        }
+
+        // --- 3. LÓGICA PRINCIPAL ---
+        async function buscarDireccion() {
+            var input = document.getElementById('direccionInput');
+            var texto = input.value;
+            if (!texto) return;
+
+            document.getElementById('status').innerText = "🔍 Buscando...";
+            if (!texto.toLowerCase().includes("uruguay")) texto += ", Uruguay";
+
+            try {
+                var res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(texto)}`);
+                var data = await res.json();
+
+                if (data && data.length > 0) {
+                    agregarParada(parseFloat(data[0].lat), parseFloat(data[0].lon), data[0].display_name);
+                    input.value = "";
+                } else {
+                    document.getElementById('status').innerText = "❌ No encontrado.";
+                }
+            } catch (e) {
+                console.error(e);
+                document.getElementById('status').innerText = "⚠️ Error de red.";
+            }
+        }
+
+        function agregarParada(lat, lng, nombre) {
+            var nombreCorto = nombre.split(",")[0] + ", " + (nombre.split(",")[1] || "");
+            if (nombreCorto.length > 35) nombreCorto = nombreCorto.substring(0, 32) + "...";
+            paradas.push({ lat, lng, nombre: nombreCorto });
+            guardarDatos();
+            actualizarUI();
+        }
+
+        function borrarParada(index) {
+            if (index === 0 && paradas.length > 1) {
+                if (!confirm("⚠️ ¿Borrar Punto de Partida?")) return;
+            }
+            paradas.splice(index, 1);
+            guardarDatos();
+            actualizarUI();
+        }
+
+        function borrarTodo() {
+            if (confirm("¿Borrar todo el mapa?")) {
+                paradas = [];
+                guardarDatos();
+                actualizarUI();
+            }
+        }
+
+        async function recalcularRuta() {
+            if (paradas.length < 2) {
+                if (lineaRuta) map.removeLayer(lineaRuta);
+                return;
+            }
+            document.getElementById('status').innerText = "🔄 Calculando...";
+            var coords = paradas.map(p => p.lng + "," + p.lat).join(";");
+            var url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
+
+            try {
+                var res = await fetch(url);
+                var data = await res.json();
+                if (data.routes && data.routes.length > 0) dibujarLinea(data.routes[0]);
+            } catch (e) { console.error(e); }
+        }
+
+        async function optimizarRuta() {
+            if (paradas.length < 3) return;
+
+            var esCircular = document.getElementById('checkCircular').checked;
+            document.getElementById('status').innerText = "🧠 Optimizando...";
+
+            var coords = paradas.map(p => p.lng + "," + p.lat).join(";");
+            var url = `https://router.project-osrm.org/trip/v1/driving/${coords}?overview=full&geometries=geojson&source=first&roundtrip=${esCircular}`;
+
+            try {
+                var res = await fetch(url);
+                var data = await res.json();
+
+                if (data.trips && data.trips.length > 0) {
+                    var nuevasParadas = [];
+                    data.waypoints.sort((a, b) => a.trips_index - b.trips_index);
+                    data.waypoints.forEach(wp => {
+                        nuevasParadas.push(paradas[wp.waypoint_index]);
+                    });
+
+                    paradas = nuevasParadas;
+                    guardarDatos(); // Guardamos el nuevo orden optimizado
+                    actualizarUI(false);
+                    dibujarLinea(data.trips[0]);
+
+                    var kms = (data.trips[0].distance / 1000).toFixed(1);
+                    document.getElementById('status').innerHTML = `✅ <b>${kms} km</b> (Optimizada)`;
+                }
+            } catch (e) {
+                console.error(e);
+                document.getElementById('status').innerText = "Error optimizando.";
+            }
+        }
+
+        function actualizarUI(calcular = true) {
+            marcadores.forEach(m => map.removeLayer(m));
+            marcadores = [];
+            var listaHTML = "";
+
+            paradas.forEach((p, index) => {
+                var esInicio = index === 0;
+                var color = esInicio ? '#27ae60' : '#e74c3c';
+
+                var iconHtml = `<div style="background-color:${color};" class='marker-pin'></div><span>${index + 1}</span>`;
+                var cssIcon = L.divIcon({ className: 'custom-div-icon', html: iconHtml, iconSize: [30, 42], iconAnchor: [15, 42] });
+
+                var m = L.marker([p.lat, p.lng], { icon: cssIcon }).addTo(map).bindPopup(`<b>${index + 1}. ${p.nombre}</b>`);
+                marcadores.push(m);
+
+                listaHTML += `
+                    <div class="punto-item">
+                        <div class="punto-info">
+                            <div class="badge ${esInicio ? 'start' : ''}">${index + 1}</div>
+                            <span>${p.nombre}</span>
+                        </div>
+                        <button class="btn-delete" onclick="borrarParada(${index})"><i class="fas fa-times"></i></button>
+                    </div>`;
+            });
+
+            document.getElementById('listaPuntos').innerHTML = listaHTML;
+
+            var hayRuta = paradas.length > 2;
+            document.getElementById('btnOptimizar').style.display = hayRuta ? "block" : "none";
+            document.getElementById('switchContainer').style.display = hayRuta ? "flex" : "none";
+            // Mostramos botones de exportar si hay al menos 2 puntos
+            document.getElementById('actionButtons').style.display = paradas.length > 1 ? "flex" : "none";
+
+            if (calcular && paradas.length > 1) recalcularRuta();
+            else if (paradas.length < 2 && lineaRuta) map.removeLayer(lineaRuta);
+        }
+
+        function dibujarLinea(routeData) {
+            if (lineaRuta) map.removeLayer(lineaRuta);
+            var latlngs = routeData.geometry.coordinates.map(c => [c[1], c[0]]);
+            lineaRuta = L.polyline(latlngs, { color: '#3498db', weight: 6, opacity: 0.8 }).addTo(map);
+            map.fitBounds(lineaRuta.getBounds(), { padding: [50, 50] });
+        }
+
+        function handleEnter(e) { if (e.key === 'Enter') buscarDireccion(); }
+        map.on('click', function (e) { agregarParada(e.latlng.lat, e.latlng.lng, "Ubicación Manual"); });
+
+    </script>
+</body>
+
+</html>
